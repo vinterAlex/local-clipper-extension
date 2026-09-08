@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Local Clipper",
+  "name": "Local Clipper — Private Web Snippet & Text Saver",
   "version": "1.1.0",
   "description": "Save text snippets locally from anywhere. Free community plan plus a Pro upgrade for unlimited clips, bulk management, and exports.",
   "permissions": [
