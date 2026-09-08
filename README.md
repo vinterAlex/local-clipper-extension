@@ -1,8 +1,4 @@
-# Every-Day Utilities
-
-A growing collection of small, practical local-first tools for everyday tasks.
-
-## Local Clipper
+# Local Clipper
 
 Save text snippets locally from any website with a right-click — no account, no cloud, no tracking. Everything stays in your browser's own storage.
 
