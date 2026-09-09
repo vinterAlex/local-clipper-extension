@@ -33,7 +33,7 @@ Your clips are stored entirely in your browser's local storage. Nothing ever lea
 
 The extension is fully usable for free. To unlock every feature, activate a Pro license key.
 
-**Get Pro:** [Checkout placeholder — link coming soon]()
+**Get Pro:** [Local Clipper Extension](https://every-day-utilities.lemonsqueezy.com/checkout/buy/d1e75e77-76c5-4f50-b8c8-d96b32690798)
 
 ### Requirements & install
 
