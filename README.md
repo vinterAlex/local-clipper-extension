@@ -68,3 +68,10 @@ local-simple-chrome-clipper/
 ### Privacy
 
 100% local. No analytics, no accounts, no network calls except for validating your Pro license key against Lemon Squeezy.
+
+### Screenshots
+<img width="414" height="855" alt="local_clipper_3_dark" src="https://github.com/user-attachments/assets/ecf5bb0c-cf9f-4e29-ad18-3ca07a1f6e69" />
+
+<img width="415" height="863" alt="local_clipper_2" src="https://github.com/user-attachments/assets/afaba252-9ec7-4903-aa0f-71c78a9985e3" />
+
+
