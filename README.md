@@ -37,6 +37,9 @@ The extension is fully usable for free. To unlock every feature, activate a Pro 
 
 ### Requirements & install
 
+Either install it directly from Chrome Web Store [Local Clipper — Private Web Snippet & Text Saver](https://chromewebstore.google.com/detail/local-clipper-%E2%80%94-private-w/lbenljceefgoppjoemkgkbpgdebnkjje) or install locally with below procedures.
+
+
 This is a Manifest V3 Chrome extension. No build step is needed.
 
 1. Download or clone this repository.
