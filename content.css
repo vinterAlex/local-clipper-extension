@@ -483,3 +483,132 @@
 .clipper-pro-upsell strong {
   color: var(--clipper-primary);
 }
+
+/* Tabs */
+.clipper-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--clipper-border-color);
+}
+
+.clipper-tab {
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 6px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--clipper-text-muted);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.clipper-tab.active {
+  color: var(--clipper-primary);
+  border-bottom-color: var(--clipper-primary);
+}
+
+/* Pages list */
+.clipper-page-card {
+  background: var(--clipper-card-bg);
+  border: 1px solid var(--clipper-border-color);
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 10px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.clipper-page-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.clipper-page-favicon {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  flex: 0 0 16px;
+  object-fit: cover;
+}
+
+.clipper-page-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.clipper-page-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--clipper-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.clipper-page-sub {
+  font-size: 10px;
+  color: var(--clipper-text-muted);
+  margin-bottom: 6px;
+}
+
+.clipper-page-snippet {
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--clipper-text-muted);
+  margin-bottom: 8px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.clipper-page-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--clipper-border-color);
+}
+
+.clipper-btn-read {
+  background: var(--clipper-primary);
+  color: #ffffff;
+  border: none;
+  padding: 3px 10px;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.clipper-btn-original {
+  background: transparent;
+  color: var(--clipper-primary);
+  border: none;
+  padding: 3px 6px;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.clipper-page-checkbox {
+  margin: 0;
+}
+
+.clipper-btn-save-page {
+  background: var(--clipper-primary);
+  color: #ffffff;
+  border: none;
+  padding: 4px 8px;
+  font-size: 11px;
+  border-radius: 4px;
+  cursor: pointer;
+}

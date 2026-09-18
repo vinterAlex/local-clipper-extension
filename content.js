@@ -17,7 +17,13 @@ drawer.innerHTML = `
     </div>
     <button class="clipper-close-btn" id="clipperCloseBtn">✕ Hide</button>
   </div>
-  
+
+  <div class="clipper-tabs">
+    <button class="clipper-tab active" id="clipperTabClips" data-tab="clips">Clips</button>
+    <button class="clipper-tab" id="clipperTabPages" data-tab="pages">Pages</button>
+  </div>
+
+  <div id="clipperClipsView">
   <div class="clipper-stats-bar">
     <span id="clipperTotalCount">Total: 0</span>
     <span id="clipperFilteredCount" style="display:none;">Filtered: 0</span>
@@ -25,14 +31,14 @@ drawer.innerHTML = `
 
   <div class="clipper-storage-wrapper">
     <div class="clipper-storage-text">
-      <span>Storage Used:</span>
+      <span>Storage Used (clips + pages):</span>
       <strong id="clipperStorageUsage">0 KB</strong>
     </div>
     <div class="clipper-storage-bar">
       <div id="clipperStorageProgress" class="clipper-storage-progress" style="width: 0%;"></div>
     </div>
     <div id="clipperStorageWarning" class="clipper-storage-warning" style="display:none;">
-      ⚠️ High storage usage (>6 MB). Consider exporting and clearing space for optimal performance.
+      ⚠️ High storage usage. Consider exporting and clearing space for optimal performance.
     </div>
   </div>
 
@@ -64,6 +70,45 @@ drawer.innerHTML = `
         Bulk manage and export your clips with <strong>Pro</strong>.
       </div>
 
+  <div id="clipperContainer"></div>
+  </div>
+
+  <div id="clipperPagesView" style="display:none;">
+    <div class="clipper-stats-bar">
+      <span id="clipperPagesCount">Pages: 0</span>
+      <span id="clipperPagesSearchCount" style="display:none;">Matches: 0</span>
+    </div>
+
+    <input type="text" class="clipper-search" id="clipperPageSearch" placeholder="Search saved pages...">
+
+    <div id="clipperPagesProUpsell" class="clipper-pro-upsell" style="display:none;">
+      Full-text search, unlimited pages and archive export with <strong>Pro</strong>.
+    </div>
+
+    <div class="clipper-toolbar-select">
+      <label id="clipperPagesEmbedWrap"><input type="checkbox" id="clipperPagesEmbedImages"> Embed images offline</label>
+      <div style="display:flex; gap:6px; align-items:center;">
+        <button id="clipperBtnSavePage" class="clipper-btn-save-page">Save this page</button>
+        <div class="clipper-dropdown">
+          <button id="clipperPagesDropdownToggle" class="clipper-dropdown-btn">Actions ⚙️ ▼</button>
+          <div id="clipperPagesDropdownMenu" class="clipper-dropdown-content">
+            <button id="clipperBtnOpenLibrary">Open Library</button>
+            <button id="clipperBtnExportArchive">Export archive (ZIP)<span class="clipper-pro-hint">PRO</span></button>
+            <hr style="border:none; border-top:1px solid var(--clipper-border-color); margin:4px 0;">
+            <button id="clipperBtnClearPages" style="color:#dc2626;">Clear all pages<span class="clipper-pro-hint">PRO</span></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="clipper-toolbar-select">
+      <label id="clipperPagesSelectAllWrap" style="display:none;"><input type="checkbox" id="clipperPagesSelectAll"> Select All Visible</label>
+      <button id="clipperBtnDeleteSelectedPages" class="clipper-btn-del-selected" style="display:none; margin-left:auto;">Delete Selected</button>
+    </div>
+
+    <div id="clipperPagesContainer"></div>
+  </div>
+
   <!-- Safety Modal for Clear All -->
   <div id="clipperClearModal" class="clipper-modal" style="display:none;">
     <div class="clipper-modal-content">
@@ -88,8 +133,6 @@ drawer.innerHTML = `
     <input type="text" id="clipperLicenseKey" class="clipper-search" placeholder="Paste License Key" style="margin-bottom:6px;">
     <button id="clipperBtnActivate" style="background:#15803d; color:white; width:100%; padding:6px; border:none; border-radius:4px; cursor:pointer;">Activate License</button>
   </div>
-
-  <div id="clipperContainer"></div>
 `;
 document.body.appendChild(drawer);
 
@@ -147,12 +190,35 @@ const btnModalCancel = document.getElementById("clipperBtnModalCancel");
 const btnModalConfirm = document.getElementById("clipperBtnModalConfirm");
 const modalRadioInputs = document.querySelectorAll('input[name="exportCheck"]');
 
+const clipsView = document.getElementById("clipperClipsView");
+const pagesView = document.getElementById("clipperPagesView");
+const tabClips = document.getElementById("clipperTabClips");
+const tabPages = document.getElementById("clipperTabPages");
+const pagesContainer = document.getElementById("clipperPagesContainer");
+const pagesCountSpan = document.getElementById("clipperPagesCount");
+const pagesSearchCountSpan = document.getElementById("clipperPagesSearchCount");
+const pageSearchInput = document.getElementById("clipperPageSearch");
+const pagesProUpsell = document.getElementById("clipperPagesProUpsell");
+const btnSavePage = document.getElementById("clipperBtnSavePage");
+const btnOpenLibrary = document.getElementById("clipperBtnOpenLibrary");
+const embedImagesCheckbox = document.getElementById("clipperPagesEmbedImages");
+const pagesDropdownToggle = document.getElementById("clipperPagesDropdownToggle");
+const pagesDropdownMenu = document.getElementById("clipperPagesDropdownMenu");
+const btnExportArchive = document.getElementById("clipperBtnExportArchive");
+const btnClearPages = document.getElementById("clipperBtnClearPages");
+const pagesSelectAllWrap = document.getElementById("clipperPagesSelectAllWrap");
+const pagesSelectAllCheckbox = document.getElementById("clipperPagesSelectAll");
+const btnDeleteSelectedPages = document.getElementById("clipperBtnDeleteSelectedPages");
+
 const BATCH_SIZE = 15;
 const COMMUNITY_CLIP_LIMIT = 50;
 let currentRenderIndex = 0;
 let isProState = false;
+let pagesIsPro = false;
 let currentFilteredClips = [];
 let searchTimeout = null;
+let currentTab = "clips";
+let pageSearchTimeout = null;
 
 function applyTheme(theme) {
   if (theme === "dark") {
@@ -185,6 +251,7 @@ dropdownToggle.addEventListener("click", (e) => {
 
 document.addEventListener("click", () => {
   dropdownMenu.classList.remove("show");
+  pagesDropdownMenu.classList.remove("show");
 });
 
 let isResizing = false;
@@ -258,25 +325,37 @@ function showToastNotification(message, isWarning = false) {
   }, 2500);
 }
 
-function updateStorageTracker() {
-  chrome.storage.local.getBytesInUse(null, (bytes) => {
-    const kb = (bytes / 1024).toFixed(1);
-    const mb = (bytes / (1024 * 1024)).toFixed(2);
-    
-    const targetSoftLimit = 6 * 1024 * 1024;
-    const percentage = Math.min(((bytes / targetSoftLimit) * 100), 100).toFixed(1);
+function renderStorageTracker(bytes, quota) {
+  const kb = (bytes / 1024).toFixed(1);
+  const mb = (bytes / (1024 * 1024)).toFixed(2);
+  const target = quota > 0 ? quota : 6 * 1024 * 1024;
+  const percentage = Math.min((bytes / target) * 100, 100).toFixed(1);
+  const highUsage = quota > 0 ? percentage >= 80 : bytes >= target;
 
-    if (bytes >= targetSoftLimit) {
-      storageUsageText.innerText = `${mb} MB`;
-      storageProgressBar.style.width = "100%";
-      storageProgressBar.style.background = "#e11d48";
-      storageWarning.style.display = "block";
-    } else {
-      storageUsageText.innerText = bytes > 1024 * 1024 ? `${mb} MB` : `${kb} KB`;
-      storageProgressBar.style.width = `${percentage}%`;
-      storageProgressBar.style.background = percentage > 80 ? "#f59e0b" : "#0284c7";
-      storageWarning.style.display = "none";
-    }
+  storageUsageText.innerText = bytes > 1024 * 1024 ? `${mb} MB` : `${kb} KB`;
+  storageProgressBar.style.width = `${percentage}%`;
+  storageProgressBar.style.background = highUsage ? "#e11d48" : percentage > 80 ? "#f59e0b" : "#0284c7";
+  storageWarning.style.display = highUsage ? "block" : "none";
+}
+
+let storageTrackerBusy = false;
+let lastStorageUpdate = 0;
+
+function updateStorageTracker() {
+  const now = Date.now();
+  if (storageTrackerBusy || now - lastStorageUpdate < 1500) return;
+  storageTrackerBusy = true;
+
+  chrome.storage.local.getBytesInUse(null, (localBytes) => {
+    chrome.runtime.sendMessage({ action: "archive_size" }, (res) => {
+      void chrome.runtime.lastError;
+      storageTrackerBusy = false;
+      lastStorageUpdate = Date.now();
+
+      const archiveBytes = res && res.ok ? (res.bytes || 0) : 0;
+      const quota = res && res.ok ? (res.quota || 0) : 0;
+      renderStorageTracker((localBytes || 0) + archiveBytes, quota);
+    });
   });
 }
 
@@ -448,6 +527,7 @@ function renderDrawerClips(filter = "") {
 }
 
 drawer.addEventListener("scroll", () => {
+  if (currentTab !== "clips") return;
   if (currentRenderIndex >= currentFilteredClips.length) return;
   if (drawer.scrollTop + drawer.clientHeight >= drawer.scrollHeight - 100) {
     renderNextBatch();
@@ -622,7 +702,11 @@ btnActivate.addEventListener("click", async () => {
       chrome.storage.local.set({ isPro: true }, () => {
         alert("License activated! You are now Pro.");
         proBox.style.display = "none";
-        renderDrawerClips();
+        if (currentTab === "pages") {
+          renderPages(pageSearchInput.value);
+        } else {
+          renderDrawerClips();
+        }
       });
     } else {
       alert("Invalid license key.");
@@ -630,6 +714,235 @@ btnActivate.addEventListener("click", async () => {
   } catch (err) {
     alert("Error validating key.");
   }
+});
+
+function hashString(str) {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash << 5) - hash + str.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
+
+function avatarLetter(domain) {
+  const clean = (domain || "?").replace(/^www\./, "");
+  const match = clean.match(/[a-z0-9]/i);
+  return (match ? match[0] : "?").toUpperCase();
+}
+
+function avatarColor(domain) {
+  return `hsl(${hashString(domain || "?") % 360}, 55%, 45%)`;
+}
+
+function formatPageDate(iso) {
+  if (!iso) return "";
+  const date = new Date(iso);
+  if (isNaN(date.getTime())) return "";
+  return date.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+}
+
+function createPageCard(page, showCheckbox) {
+  const card = document.createElement("div");
+  card.className = "clipper-page-card";
+
+  const faviconHtml = page.favicon
+    ? `<img class="clipper-page-favicon" src="${page.favicon}" alt="">`
+    : `<span class="clipper-page-favicon clipper-page-avatar" style="background:${avatarColor(page.domain)}">${escapeHtml(avatarLetter(page.domain))}</span>`;
+
+  const snippet = page.snippet || page.excerpt || "";
+  const checkboxHtml = showCheckbox
+    ? `<input type="checkbox" class="clipper-page-checkbox" data-id="${page.id}">`
+    : "";
+
+  card.innerHTML = `
+    <div class="clipper-page-head">
+      ${checkboxHtml}
+      ${faviconHtml}
+      <span class="clipper-page-title" title="${escapeHtml(page.title || "Untitled")}">${escapeHtml(page.title || "Untitled")}</span>
+    </div>
+    <div class="clipper-page-sub">${escapeHtml(page.domain || "")} · ${formatPageDate(page.savedAt)} · ${page.readingTime || 1} min read</div>
+    ${snippet ? `<div class="clipper-page-snippet">${escapeHtml(snippet)}</div>` : ""}
+    <div class="clipper-page-actions">
+      <button class="clipper-btn-read" data-id="${page.id}">Read</button>
+      <button class="clipper-btn-original" data-url="${escapeHtml(page.url || "")}">Original ↗</button>
+      <button class="clipper-btn-del" data-id="${page.id}">Delete</button>
+    </div>
+  `;
+
+  const checkbox = card.querySelector(".clipper-page-checkbox");
+  if (checkbox) checkbox.addEventListener("change", updateSelectedPagesCount);
+
+  card.querySelector(".clipper-btn-read").addEventListener("click", (e) => {
+    chrome.runtime.sendMessage({ action: "open_reader", pageId: e.target.getAttribute("data-id") });
+  });
+
+  card.querySelector(".clipper-btn-original").addEventListener("click", (e) => {
+    const url = e.target.getAttribute("data-url");
+    if (url) window.open(url, "_blank", "noopener");
+  });
+
+  card.querySelector(".clipper-btn-del").addEventListener("click", (e) => {
+    const id = e.target.getAttribute("data-id");
+    if (!confirm("Delete this saved page?")) return;
+    chrome.runtime.sendMessage({ action: "delete_page", id }, () => {
+      if (currentTab === "pages") renderPages(pageSearchInput.value);
+    });
+  });
+
+  return card;
+}
+
+function updateSelectedPagesCount() {
+  const selected = document.querySelectorAll(".clipper-page-checkbox:checked");
+  if (selected.length > 0) {
+    btnDeleteSelectedPages.style.display = "inline-block";
+    btnDeleteSelectedPages.innerText = `Delete Selected (${selected.length})`;
+  } else {
+    btnDeleteSelectedPages.style.display = "none";
+  }
+}
+
+function renderPages(filter = "") {
+  chrome.runtime.sendMessage({ action: "search_pages", query: filter }, (res) => {
+    if (!res || !res.ok) return;
+    const pages = res.pages || [];
+    pagesIsPro = !!res.fullText;
+    pagesContainer.innerHTML = "";
+    pagesSelectAllCheckbox.checked = false;
+    updateSelectedPagesCount();
+
+    if (filter.trim() !== "") {
+      pagesSearchCountSpan.style.display = "inline";
+      pagesSearchCountSpan.innerText = `Matches: ${pages.length}`;
+    } else {
+      pagesSearchCountSpan.style.display = "none";
+    }
+
+    if (!pagesIsPro) {
+      pagesProUpsell.style.display = "block";
+      pagesProUpsell.innerHTML = filter.trim() !== ""
+        ? "Full-text search is a <strong>Pro</strong> feature. Upgrade to search inside saved pages."
+        : "Full-text search, unlimited pages, bulk manage and archive export with <strong>Pro</strong>.";
+    } else {
+      pagesProUpsell.style.display = "none";
+    }
+
+    pagesSelectAllWrap.style.display = pagesIsPro ? "flex" : "none";
+
+    if (pages.length === 0) {
+      pagesContainer.innerHTML = "<p style='font-size:12px;color:var(--clipper-text-muted);'>No saved pages yet. Right-click a page and choose “Save page for later”, or use “Save this page”.</p>";
+      return;
+    }
+
+    pages.forEach((page) => pagesContainer.appendChild(createPageCard(page, pagesIsPro)));
+  });
+
+  chrome.runtime.sendMessage({ action: "page_count" }, (res) => {
+    if (res && res.ok) {
+      pagesIsPro = res.isPro;
+      pagesCountSpan.innerText = res.isPro ? `Pages: ${res.count}` : `Pages: ${res.count} / ${res.limit}`;
+      pagesSelectAllWrap.style.display = res.isPro ? "flex" : "none";
+    }
+  });
+}
+
+function switchTab(tab) {
+  currentTab = tab;
+  const isClips = tab === "clips";
+  clipsView.style.display = isClips ? "block" : "none";
+  pagesView.style.display = isClips ? "none" : "block";
+  tabClips.classList.toggle("active", isClips);
+  tabPages.classList.toggle("active", !isClips);
+  if (isClips) {
+    renderDrawerClips(searchInput.value);
+  } else {
+    renderPages(pageSearchInput.value);
+  }
+}
+
+tabClips.addEventListener("click", () => switchTab("clips"));
+tabPages.addEventListener("click", () => switchTab("pages"));
+
+pageSearchInput.addEventListener("input", (e) => {
+  clearTimeout(pageSearchTimeout);
+  const val = e.target.value;
+  pageSearchTimeout = setTimeout(() => renderPages(val), 150);
+});
+
+btnSavePage.addEventListener("click", () => {
+  chrome.runtime.sendMessage({ action: "capture_current_page" });
+});
+
+btnOpenLibrary.addEventListener("click", () => {
+  pagesDropdownMenu.classList.remove("show");
+  chrome.runtime.sendMessage({ action: "open_library" });
+});
+
+pagesDropdownToggle.addEventListener("click", (e) => {
+  e.stopPropagation();
+  pagesDropdownMenu.classList.toggle("show");
+});
+
+btnExportArchive.addEventListener("click", () => {
+  pagesDropdownMenu.classList.remove("show");
+  chrome.runtime.sendMessage({ action: "export_archive" });
+});
+
+btnClearPages.addEventListener("click", () => {
+  pagesDropdownMenu.classList.remove("show");
+  if (!pagesIsPro) {
+    showToastNotification("Clearing all pages requires Pro.", true);
+    return;
+  }
+  if (!confirm("Delete ALL saved pages? This cannot be undone.")) return;
+  chrome.runtime.sendMessage({ action: "clear_pages" }, (res) => {
+    if (res && res.ok) {
+      showToastNotification("All pages cleared.");
+      renderPages(pageSearchInput.value);
+    } else {
+      showToastNotification("Clearing all pages requires Pro.", true);
+    }
+  });
+});
+
+pagesSelectAllCheckbox.addEventListener("change", (e) => {
+  if (!pagesIsPro) {
+    e.target.checked = false;
+    updateSelectedPagesCount();
+    showToastNotification("Bulk select requires Pro.", true);
+    return;
+  }
+  const checked = e.target.checked;
+  document.querySelectorAll(".clipper-page-checkbox").forEach((cb) => {
+    cb.checked = checked;
+  });
+  updateSelectedPagesCount();
+});
+
+btnDeleteSelectedPages.addEventListener("click", () => {
+  if (!pagesIsPro) {
+    showToastNotification("Bulk delete requires Pro.", true);
+    return;
+  }
+  const ids = Array.from(document.querySelectorAll(".clipper-page-checkbox:checked")).map((cb) => cb.getAttribute("data-id"));
+  if (ids.length === 0) return;
+  if (!confirm(`Delete ${ids.length} selected page(s)?`)) return;
+  chrome.runtime.sendMessage({ action: "delete_pages", ids }, (res) => {
+    if (res && res.ok) {
+      renderPages(pageSearchInput.value);
+    } else {
+      showToastNotification("Bulk delete requires Pro.", true);
+    }
+  });
+});
+
+chrome.runtime.sendMessage({ action: "get_page_settings" }, (res) => {
+  if (res && res.ok) embedImagesCheckbox.checked = !!res.settings.embedImages;
+});
+
+embedImagesCheckbox.addEventListener("change", (e) => {
+  chrome.runtime.sendMessage({ action: "set_page_settings", settings: { embedImages: e.target.checked } });
 });
 
 searchInput.addEventListener("input", (e) => {
@@ -640,7 +953,7 @@ searchInput.addEventListener("input", (e) => {
   }, 150);
 });
 
-chrome.runtime.onMessage.addListener((msg) => {
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.action === "clip_saved") {
     renderDrawerClips(searchInput.value);
     drawer.classList.add("open");
@@ -648,7 +961,21 @@ chrome.runtime.onMessage.addListener((msg) => {
     showToastNotification("⚠️ Clip already exists in your collection!", true);
   } else if (msg.action === "clip_limit_reached") {
     showToastNotification(`⚠️ Free plan stores up to ${msg.limit} clips. Upgrade to Pro for unlimited.`, true);
+  } else if (msg.action === "page_saved") {
+    showToastNotification("📄 Page saved for later.");
+    if (currentTab === "pages") renderPages(pageSearchInput.value);
+  } else if (msg.action === "page_limit_reached") {
+    showToastNotification(`⚠️ Free plan saves up to ${msg.limit} pages. Upgrade to Pro for unlimited.`, true);
+    switchTab("pages");
+    drawer.classList.add("open");
+  } else if (msg.action === "page_save_error") {
+    showToastNotification(msg.message || "Could not save this page.", true);
+  } else if (msg.action === "page_duplicate_prompt") {
+    const ok = window.confirm("A saved copy of this page already exists. Replace it with the current version?");
+    sendResponse({ ok });
+    return true;
   }
+  return undefined;
 });
 
 renderDrawerClips();

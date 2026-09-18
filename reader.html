@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Local Clipper — Read Later Library</title>
+  <link rel="stylesheet" href="reader.css">
+</head>
+<body>
+  <div id="rcProgress" class="rc-progress"><div id="rcProgressBar" class="rc-progress-bar"></div></div>
+  <header class="rc-header">
+    <div class="rc-brand">
+      <button id="rcBack" class="rc-icon-btn" title="Back to library" style="display:none;">←</button>
+      <span class="rc-logo">Local Clipper</span>
+      <span class="rc-tab-badge">Read Later</span>
+    </div>
+    <div class="rc-actions">
+      <input type="search" id="rcSearch" class="rc-search" placeholder="Search saved pages...">
+      <button id="rcExport" class="rc-btn rc-btn-pro">Export ZIP <span class="rc-pro">PRO</span></button>
+      <button id="rcPrint" class="rc-icon-btn" title="Print / Save as PDF">🖨️</button>
+      <button id="rcTheme" class="rc-icon-btn" title="Toggle light/dark">🌙</button>
+    </div>
+  </header>
+
+  <div id="rcUpsell" class="rc-upsell" style="display:none;"></div>
+
+  <main class="rc-main">
+    <section id="rcLibrary" class="rc-library">
+      <div id="rcList" class="rc-list"></div>
+    </section>
+
+    <article id="rcReader" class="rc-reader" style="display:none;">
+      <div class="rc-reader-meta">
+        <h1 id="rcTitle"></h1>
+        <div id="rcSub" class="rc-sub"></div>
+        <div id="rcSource" class="rc-source"></div>
+      </div>
+      <div id="rcContent" class="rc-content"></div>
+    </article>
+  </main>
+
+  <script src="archive.js"></script>
+  <script src="zip.js"></script>
+  <script src="reader.js"></script>
+</body>
+</html>

@@ -1,0 +1,377 @@
+:root {
+  --rc-bg: #ffffff;
+  --rc-text: #1e293b;
+  --rc-text-muted: #64748b;
+  --rc-card-bg: #f8fafc;
+  --rc-border: #e2e8f0;
+  --rc-primary: #0284c7;
+  --rc-hover: #f1f5f9;
+}
+
+body.dark {
+  --rc-bg: #0f172a;
+  --rc-text: #f8fafc;
+  --rc-text-muted: #94a3b8;
+  --rc-card-bg: #1e293b;
+  --rc-border: #334155;
+  --rc-primary: #38bdf8;
+  --rc-hover: #1e293b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--rc-bg);
+  color: var(--rc-text);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  min-height: 100vh;
+}
+
+.rc-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: var(--rc-bg);
+  border-bottom: 1px solid var(--rc-border);
+}
+
+.rc-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.rc-logo {
+  font-size: 15px;
+}
+
+.rc-tab-badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--rc-primary);
+  border: 1px solid var(--rc-border);
+  border-radius: 10px;
+  padding: 2px 8px;
+}
+
+.rc-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.rc-search {
+  width: 100%;
+  max-width: 320px;
+  padding: 7px 10px;
+  border: 1px solid var(--rc-border);
+  border-radius: 6px;
+  background: var(--rc-card-bg);
+  color: var(--rc-text);
+  font-size: 13px;
+}
+
+.rc-btn {
+  border: 1px solid var(--rc-border);
+  background: var(--rc-card-bg);
+  color: var(--rc-text);
+  border-radius: 6px;
+  padding: 7px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.rc-btn-pro {
+  background: var(--rc-primary);
+  color: #ffffff;
+  border-color: transparent;
+}
+
+.rc-pro {
+  font-size: 8px;
+  font-weight: 800;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 3px;
+  padding: 1px 3px;
+  margin-left: 4px;
+}
+
+.rc-icon-btn {
+  border: 1px solid var(--rc-border);
+  background: var(--rc-card-bg);
+  color: var(--rc-text);
+  border-radius: 6px;
+  width: 30px;
+  height: 30px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.rc-upsell {
+  background: var(--rc-card-bg);
+  border-bottom: 1px solid var(--rc-border);
+  color: var(--rc-text-muted);
+  font-size: 12px;
+  text-align: center;
+  padding: 8px 16px;
+}
+
+.rc-upsell strong {
+  color: var(--rc-primary);
+}
+
+.rc-main {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+.rc-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.rc-card {
+  border: 1px solid var(--rc-border);
+  background: var(--rc-card-bg);
+  border-radius: 10px;
+  padding: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.rc-card:hover {
+  border-color: var(--rc-primary);
+  transform: translateY(-1px);
+}
+
+.rc-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.rc-favicon {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  flex: 0 0 18px;
+  object-fit: cover;
+}
+
+.rc-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.rc-card-title {
+  font-size: 13px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rc-card-sub {
+  font-size: 11px;
+  color: var(--rc-text-muted);
+  margin-bottom: 6px;
+}
+
+.rc-card-snippet {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--rc-text-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.rc-card-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.rc-card-actions button {
+  border: none;
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.rc-open {
+  background: var(--rc-primary);
+  color: #ffffff;
+}
+
+.rc-del {
+  background: transparent;
+  color: #dc2626;
+}
+
+.rc-empty {
+  color: var(--rc-text-muted);
+  font-size: 13px;
+}
+
+.rc-reader {
+  max-width: 720px;
+  margin: 0 auto;
+  padding-bottom: 64px;
+}
+
+.rc-reader-meta h1 {
+  font-size: 26px;
+  line-height: 1.25;
+  margin: 0 0 8px 0;
+}
+
+.rc-sub {
+  font-size: 12px;
+  color: var(--rc-text-muted);
+  margin-bottom: 8px;
+}
+
+.rc-source {
+  font-size: 12px;
+  margin-bottom: 24px;
+}
+
+.rc-source a {
+  color: var(--rc-primary);
+  text-decoration: none;
+}
+
+.rc-content {
+  font-size: 18px;
+  line-height: 1.75;
+}
+
+.rc-content img,
+.rc-content video {
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+}
+
+.rc-content a {
+  color: var(--rc-primary);
+}
+
+.rc-content pre {
+  background: var(--rc-card-bg);
+  border: 1px solid var(--rc-border);
+  border-radius: 6px;
+  padding: 12px;
+  overflow-x: auto;
+  font-size: 14px;
+}
+
+.rc-content code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.rc-content blockquote {
+  border-left: 3px solid var(--rc-border);
+  margin-left: 0;
+  padding-left: 16px;
+  color: var(--rc-text-muted);
+}
+
+.rc-content table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.rc-content th,
+.rc-content td {
+  border: 1px solid var(--rc-border);
+  padding: 6px 8px;
+  text-align: left;
+}
+
+@media (max-width: 640px) {
+  .rc-header {
+    flex-wrap: wrap;
+  }
+  .rc-search {
+    max-width: none;
+  }
+  .rc-content {
+    font-size: 16px;
+  }
+}
+
+/* Reading progress */
+.rc-progress {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  z-index: 30;
+  pointer-events: none;
+}
+
+.rc-progress-bar {
+  width: 0%;
+  height: 100%;
+  background: var(--rc-primary);
+  transition: width 0.1s linear;
+}
+
+.rc-original {
+  background: transparent;
+  color: var(--rc-primary);
+}
+
+@media print {
+  .rc-header,
+  .rc-progress,
+  .rc-upsell,
+  .rc-card-actions,
+  .rc-card-snippet {
+    display: none !important;
+  }
+  body {
+    background: #ffffff;
+    color: #000000;
+  }
+  .rc-main,
+  .rc-reader {
+    max-width: none;
+    padding: 0;
+  }
+  .rc-source a,
+  .rc-content a {
+    color: #000000;
+  }
+}

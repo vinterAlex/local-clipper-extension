@@ -15,10 +15,18 @@
     .btn-pro { background: #16a34a; color: white; flex: 1; }
     .card { background: #ffffff; padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #e2e8f0; }
     .card p { margin: 0 0 6px 0; font-size: 13px; line-height: 1.4; word-break: break-word; }
-    .meta { font-size: 11px; display: flex; justify-content: space-between; align-items: center; }
+    .meta { font-size: 11px; display: flex; justify-content: space-between; align-items: center; gap: 6px; }
     .meta a { color: #2563eb; text-decoration: none; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .btn-del { background: #ef4444; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; border: none; cursor: pointer; }
+    .btn-read { background: #0284c7; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; border: none; cursor: pointer; }
     .pro-box { background: #f0fdf4; border: 1px solid #bbf7d0; padding: 10px; border-radius: 6px; font-size: 12px; margin-bottom: 12px; display: none; }
+    .tabs { display: flex; gap: 4px; margin-bottom: 10px; border-bottom: 1px solid #e2e8f0; }
+    .tab { flex: 1; background: transparent; border: none; border-bottom: 2px solid transparent; padding: 6px 8px; font-size: 12px; font-weight: 600; color: #64748b; cursor: pointer; }
+    .tab.active { color: #0284c7; border-bottom-color: #0284c7; }
+    .upsell { background: #f1f5f9; border: 1px dashed #cbd5e1; border-radius: 6px; padding: 8px 10px; margin-bottom: 10px; font-size: 11px; color: #64748b; text-align: center; }
+    .upsell strong { color: #0284c7; }
+    .count { font-size: 11px; color: #64748b; margin-bottom: 8px; }
+    .page-sub { font-size: 10px; color: #64748b; margin-bottom: 6px; }
   </style>
 </head>
 <body>
@@ -27,11 +35,30 @@
     <button class="btn-close" id="btnClose">✕ Close</button>
   </div>
 
-  <input type="text" id="search" placeholder="Search clips...">
-  
-  <div class="actions">
-    <button class="action-btn btn-export" id="btnExport">Export (Pro)</button>
-    <button class="action-btn btn-pro" id="btnPro">Upgrade Pro</button>
+  <div class="tabs">
+    <button class="tab active" id="tabClips">Clips</button>
+    <button class="tab" id="tabPages">Pages</button>
+  </div>
+
+  <div id="clipsView">
+    <input type="text" id="search" placeholder="Search clips...">
+
+    <div class="actions">
+      <button class="action-btn btn-export" id="btnExport">Export (Pro)</button>
+      <button class="action-btn btn-pro" id="btnPro">Upgrade Pro</button>
+    </div>
+
+    <div id="clipsContainer"></div>
+  </div>
+
+  <div id="pagesView" style="display:none;">
+    <div class="count" id="pagesCount">Pages: 0</div>
+    <input type="text" id="pageSearch" placeholder="Search saved pages...">
+    <div class="upsell" id="pagesUpsell" style="display:none;"></div>
+    <div class="actions">
+      <button class="action-btn btn-export" id="btnOpenLibrary">Open Library</button>
+    </div>
+    <div id="pagesContainer"></div>
   </div>
 
   <div id="proBox" class="pro-box">
@@ -40,8 +67,7 @@
     <button id="btnActivate" style="background:#15803d; color:white; width:100%; padding:6px; border:none; border-radius:4px; cursor:pointer;">Activate License</button>
   </div>
 
-  <div id="clipsContainer"></div>
-
+  <script src="archive.js"></script>
   <script src="sidepanel.js"></script>
 </body>
 </html>
