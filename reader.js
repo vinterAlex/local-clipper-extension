@@ -4,12 +4,18 @@
   "use strict";
 
   const FREE_PAGE_LIMIT = 10;
-  const state = { isPro: false, theme: "light", currentId: null, searchTimer: null };
+  const REVIEW_SAVE_THRESHOLD = 10;
+  const REVIEW_URL =
+    "https://chromewebstore.google.com/detail/local-clipper-%E2%80%94-private-w/lbenljceefgoppjoemkgkbpgdebnkjje/reviews";
+  const state = { isPro: false, theme: "light", currentId: null, searchTimer: null, noticeTimer: null };
 
   const els = {
     back: document.getElementById("rcBack"),
     search: document.getElementById("rcSearch"),
     export: document.getElementById("rcExport"),
+    importBtn: document.getElementById("rcImport"),
+    importFile: document.getElementById("rcImportFile"),
+    notice: document.getElementById("rcNotice"),
     print: document.getElementById("rcPrint"),
     theme: document.getElementById("rcTheme"),
     progress: document.getElementById("rcProgress"),
@@ -55,6 +61,19 @@
     const date = new Date(iso);
     if (isNaN(date.getTime())) return "";
     return date.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+  }
+
+  function newId() {
+    return "p_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  }
+
+  function showNotice(html, sticky) {
+    els.notice.innerHTML = html;
+    els.notice.style.display = "block";
+    clearTimeout(state.noticeTimer);
+    if (!sticky) {
+      state.noticeTimer = setTimeout(function () { els.notice.style.display = "none"; }, 12000);
+    }
   }
 
   function applyTheme(theme) {
@@ -103,7 +122,8 @@
     if (!pages.length) {
       els.list.innerHTML = query.trim()
         ? "<p class='rc-empty'>No saved pages match that search.</p>"
-        : "<p class='rc-empty'>No saved pages yet. Open any page, right-click, and choose “Save page for later”.</p>";
+        : "<p class='rc-empty'>No saved pages yet. Open any page, right-click, and choose “Save page for later”.<br>" +
+          "Already have a Pocket, Instapaper or Readwise export? Use <strong>Import</strong> above.</p>";
       return;
     }
     pages.forEach((page) => {
@@ -115,9 +135,13 @@
         : `<span class="rc-favicon rc-avatar" style="background:${avatarColor(page.domain)}">${escapeHtml(avatarLetter(page.domain))}</span>`;
 
       const snippet = page.snippet || page.excerpt || "";
+      const meta = page.imported
+        ? "link only"
+        : `${page.readingTime || 1} min read`;
+
       card.innerHTML = `
         <div class="rc-card-head">${favicon}<span class="rc-card-title">${escapeHtml(page.title || "Untitled")}</span></div>
-        <div class="rc-card-sub">${escapeHtml(page.domain || "")} · ${escapeHtml(formatDate(page.savedAt))} · ${page.readingTime || 1} min read</div>
+        <div class="rc-card-sub">${escapeHtml(page.domain || "")} · ${escapeHtml(formatDate(page.savedAt))} · ${meta}</div>
         ${snippet ? `<div class="rc-card-snippet">${escapeHtml(snippet)}</div>` : ""}
         <div class="rc-card-actions">
           <button class="rc-open">Read</button>
@@ -160,7 +184,7 @@
     els.upsell.style.display = "block";
     els.upsell.innerHTML = query.trim()
       ? "Full-text search is a <strong>Pro</strong> feature. Upgrade to search inside saved pages."
-      : `Free plan saves up to ${FREE_PAGE_LIMIT} pages. <strong>Pro</strong> unlocks unlimited pages, full-text search, and archive export.`;
+      : `Free plan saves up to ${FREE_PAGE_LIMIT} pages. <strong>Pro</strong> unlocks unlimited pages, full-text search, archive export, and unlimited import.`;
   }
 
   async function openReader(id) {
@@ -172,7 +196,7 @@
     }
     state.currentId = id;
     els.title.textContent = record.page.title || "Untitled";
-    els.sub.textContent = `${record.page.domain || ""} · ${formatDate(record.page.savedAt)} · ${record.page.readingTime || 1} min read`;
+    els.sub.textContent = `${record.page.domain || ""} · ${formatDate(record.page.savedAt)} · ${record.page.imported ? "link only" : (record.page.readingTime || 1) + " min read"}`;
     els.source.innerHTML = record.page.url
       ? `<a href="${escapeHtml(record.page.url)}" target="_blank" rel="noopener">${escapeHtml(record.page.url)}</a>`
       : "";
@@ -182,12 +206,25 @@
       const match = record.body.snapshotHtml.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
       articleHtml = match ? match[1] : record.body.snapshotHtml;
     }
-    renderArticle(articleHtml);
+
+    if (!articleHtml && record.page.imported) {
+      els.content.innerHTML =
+        '<div class="rc-imported-note">' +
+        '<p><strong>This entry was imported</strong>, so only the link is stored — the file it came from ' +
+        'did not include the article text.</p>' +
+        '<p><a href="' + escapeHtml(record.page.url) + '" target="_blank" rel="noopener">Open the original ↗</a>, ' +
+        'then right-click it and choose <em>Save page for later</em> to keep an offline copy.</p>' +
+        '</div>';
+    } else {
+      renderArticle(articleHtml);
+    }
+
     els.library.style.display = "none";
     els.reader.style.display = "block";
     els.back.style.display = "inline-flex";
     els.search.style.display = "none";
     els.upsell.style.display = "none";
+    els.notice.style.display = "none";
     els.progress.style.display = "block";
     els.progressBar.style.width = "0%";
     window.scrollTo(0, 0);
@@ -278,6 +315,107 @@
     setTimeout(() => URL.revokeObjectURL(url), 10000);
   }
 
+  // ── Import ──────────────────────────────────────────────────────────────
+  // Brings in Pocket / Instapaper / Readwise / bookmarks exports as library
+  // entries. Exports contain links, not article text, so imported rows are
+  // marked "link only" and the reader explains how to archive one properly.
+  async function importFromFile(file) {
+    let text = "";
+    try {
+      text = await file.text();
+    } catch (e) {
+      showNotice("Could not read that file.");
+      return;
+    }
+
+    const parsed = ClipperImport.parse(text, file.name);
+    if (!parsed.items.length) {
+      showNotice(
+        "No saved links found in <strong>" + escapeHtml(file.name) + "</strong>. " +
+        "Supported: a Pocket export (HTML), Instapaper or Readwise CSV, browser bookmarks HTML, " +
+        "or a Local Clipper JSON export."
+      );
+      return;
+    }
+
+    const existing = await ClipperArchive.listPages();
+    const have = new Set(existing.map(function (page) {
+      return String(page.url || "").replace(/\/+$/, "").toLowerCase();
+    }));
+
+    const fresh = parsed.items.filter(function (item) {
+      return !have.has(String(item.url).replace(/\/+$/, "").toLowerCase());
+    });
+
+    const allowance = state.isPro ? Infinity : Math.max(0, FREE_PAGE_LIMIT - existing.length);
+    const take = allowance === Infinity ? fresh : fresh.slice(0, allowance);
+
+    let imported = 0;
+    for (const item of take) {
+      const id = newId();
+      const page = {
+        id: id,
+        url: item.url,
+        title: item.title || item.url,
+        domain: ClipperImport.domainOf(item.url),
+        favicon: "",
+        savedAt: item.savedAt || new Date().toISOString(),
+        readingTime: 0,
+        wordCount: 0,
+        excerpt: item.tags && item.tags.length ? "Tags: " + item.tags.join(", ") : "",
+        byteSize: 0,
+        imported: true,
+        archived: false
+      };
+      await ClipperArchive.putPage(page, { id: id, articleHtml: "", snapshotHtml: "", text: "" });
+      imported++;
+    }
+
+    const parts = [];
+    parts.push("Imported <strong>" + imported + "</strong> of " + parsed.items.length +
+      " link" + (parsed.items.length === 1 ? "" : "s") + " from <strong>" + escapeHtml(file.name) + "</strong>.");
+
+    const skipped = parsed.items.length - fresh.length;
+    if (skipped > 0) parts.push(skipped + " were already in your library.");
+
+    const remaining = fresh.length - imported;
+    if (remaining > 0) {
+      parts.push("<br>Your free plan holds " + FREE_PAGE_LIMIT + " pages — <strong>Pro</strong> " +
+        "would bring in the remaining " + remaining + ".");
+    }
+
+    parts.push("<br><small>Imported entries are links, not offline copies: exports don't contain article text. " +
+      "Open one and use \u201cSave page for later\u201d to archive it.</small>");
+
+    showNotice(parts.join(" "));
+    loadLibrary();
+  }
+
+  async function maybeShowReviewPrompt() {
+    const data = await chrome.storage.local.get({
+      saveCount: 0,
+      reviewDismissed: false,
+      reviewShown: false
+    });
+    if (data.reviewDismissed || data.reviewShown) return;
+    if ((data.saveCount || 0) < REVIEW_SAVE_THRESHOLD) return;
+
+    showNotice(
+      "You've saved " + data.saveCount + " things. If Local Clipper is useful, a rating on the " +
+      "Chrome Web Store is how other people find it." +
+      '<div class="rc-notice-actions">' +
+      '<a class="rc-btn rc-btn-primary" href="' + REVIEW_URL + '" target="_blank" rel="noopener">Rate it \u2605</a>' +
+      '<button class="rc-btn" id="rcReviewLater">Not now</button>' +
+      '</div>',
+      true
+    );
+    document.getElementById("rcReviewLater").addEventListener("click", function () {
+      chrome.storage.local.set({ reviewDismissed: true });
+      els.notice.style.display = "none";
+    });
+    chrome.storage.local.set({ reviewShown: true });
+  }
+
   function onSearchInput() {
     clearTimeout(state.searchTimer);
     state.searchTimer = setTimeout(loadLibrary, 150);
@@ -299,6 +437,12 @@
     els.theme.addEventListener("click", toggleTheme);
     els.print.addEventListener("click", () => window.print());
     els.export.addEventListener("click", exportArchive);
+    els.importBtn.addEventListener("click", function () { els.importFile.click(); });
+    els.importFile.addEventListener("change", async function (event) {
+      const file = event.target.files && event.target.files[0];
+      event.target.value = "";
+      if (file) await importFromFile(file);
+    });
     window.addEventListener("scroll", updateProgress, { passive: true });
 
     document.addEventListener("keydown", (event) => {
@@ -340,6 +484,7 @@
       await loadLibrary();
     }
     if (params.get("export") === "1") exportArchive();
+    maybeShowReviewPrompt();
   }
 
   window.addEventListener("hashchange", () => {

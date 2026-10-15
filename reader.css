@@ -375,3 +375,37 @@ body {
     color: #000000;
   }
 }
+
+/* --- Import notice + review prompt --- */
+.rc-notice {
+  background: var(--rc-card-bg);
+  border-bottom: 1px solid var(--rc-border);
+  color: var(--rc-text);
+  padding: 14px 24px;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+.rc-notice strong { color: var(--rc-primary); }
+.rc-notice small { color: var(--rc-text-muted); }
+.rc-notice-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+  align-items: center;
+}
+.rc-btn-primary {
+  background: var(--rc-primary) !important;
+  color: #ffffff !important;
+  border-color: var(--rc-primary) !important;
+  text-decoration: none;
+  display: inline-block;
+}
+.rc-imported-note {
+  max-width: 640px;
+  padding: 20px;
+  border: 1px dashed var(--rc-border);
+  border-radius: 8px;
+  background: var(--rc-card-bg);
+  color: var(--rc-text-muted);
+}
+.rc-imported-note a { color: var(--rc-primary); }

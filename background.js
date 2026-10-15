@@ -10,6 +10,19 @@ const DEFAULT_PAGE_SETTINGS = { embedImages: true };
 let currentSelection = "";
 const captureBuffers = new Map();
 
+// Increment the lifetime save counter used by the review prompt in the
+// library page. Fire-and-forget: never block a save on it.
+function bumpSaveCount() {
+  try {
+    chrome.storage.local.get({ saveCount: 0 }, (data) => {
+      void chrome.runtime.lastError;
+      chrome.storage.local.set({ saveCount: (data.saveCount || 0) + 1 });
+    });
+  } catch (e) {
+    // Best effort only.
+  }
+}
+
 function createContextMenu() {
   chrome.contextMenus.removeAll(() => {
     chrome.contextMenus.create({
@@ -148,6 +161,7 @@ function handleSaveClip(info, tab) {
     const updatedClips = [newClip, ...existingClips];
 
     chrome.storage.local.set({ clips: updatedClips }, () => {
+      bumpSaveCount();
       chrome.tabs.sendMessage(tab.id, {
         action: "clip_saved",
         clip: newClip
@@ -209,6 +223,7 @@ async function finalizeCapture(message, sender) {
   };
 
   await ClipperArchive.putPage(page, { id, articleHtml, snapshotHtml, text });
+  bumpSaveCount();
 
   const tab = sender && sender.tab;
   if (tab && typeof tab.id === "number") {

@@ -16,13 +16,16 @@
     </div>
     <div class="rc-actions">
       <input type="search" id="rcSearch" class="rc-search" placeholder="Search saved pages...">
+      <button id="rcImport" class="rc-btn" title="Import a Pocket, Instapaper, Readwise or bookmark export">Import</button>
       <button id="rcExport" class="rc-btn rc-btn-pro">Export ZIP <span class="rc-pro">PRO</span></button>
       <button id="rcPrint" class="rc-icon-btn" title="Print / Save as PDF">🖨️</button>
+      <input type="file" id="rcImportFile" accept=".html,.htm,.csv,.json,.txt" style="display:none">
       <button id="rcTheme" class="rc-icon-btn" title="Toggle light/dark">🌙</button>
     </div>
   </header>
 
   <div id="rcUpsell" class="rc-upsell" style="display:none;"></div>
+  <div id="rcNotice" class="rc-notice" style="display:none;"></div>
 
   <main class="rc-main">
     <section id="rcLibrary" class="rc-library">
@@ -41,6 +44,7 @@
 
   <script src="archive.js"></script>
   <script src="zip.js"></script>
+  <script src="import.js"></script>
   <script src="reader.js"></script>
 </body>
 </html>

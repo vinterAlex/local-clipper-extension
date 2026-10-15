@@ -16,6 +16,7 @@ $extensionFiles = @(
   "reader.html",
   "reader.js",
   "reader.css",
+  "import.js",
   "zip.js",
   "sidepanel.html",
   "sidepanel.js"
