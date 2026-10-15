@@ -139,21 +139,18 @@ document.body.appendChild(drawer);
 // Capture selection formatting on right click and send to background.js
 document.addEventListener("contextmenu", () => {
   const selection = window.getSelection();
-  if (!selection.rangeCount) return;
+  if (!selection || !selection.rangeCount) return;
 
-  const containerEl = document.createElement("div");
-  for (let i = 0; i < selection.rangeCount; i++) {
-    containerEl.appendChild(selection.getRangeAt(0).cloneContents());
-  }
-
-  const breaks = containerEl.querySelectorAll("br, p, div, pre, li");
-  breaks.forEach(el => el.after("\n"));
-
-  const formattedText = containerEl.textContent || selection.toString();
+  // Chrome's own plain-text serialisation already inserts a newline at block
+  // boundaries. The previous approach cloned the range and called el.after("\n")
+  // for every nested br/p/div/pre/li — on deeply nested pages (GitHub's rendered
+  // README, for instance) that inserted a newline after nearly every fragment,
+  // and the card's `white-space: pre-line` then drew it one character per line.
+  const text = selection.toString();
 
   chrome.runtime.sendMessage({
     action: "set_active_selection",
-    text: formattedText
+    text: text
   });
 });
 
@@ -359,12 +356,24 @@ function updateStorageTracker() {
   });
 }
 
+// Clips saved before the capture fix may already hold the newline-per-fragment
+// artefact, so flatten it at render time too. Genuine multi-line clips are
+// untouched — the guard only fires when newlines dominate the text.
+function normalizeClipText(text) {
+  const value = String(text == null ? "" : text);
+  const newlines = (value.match(/\n/g) || []).length;
+  if (newlines > 0 && newlines > value.length / 3) {
+    return value.replace(/\s*\n\s*/g, " ").replace(/[ \t]{2,}/g, " ").trim();
+  }
+  return value.replace(/\n{3,}/g, "\n\n").trim();
+}
+
 function createCardElement(clip, showCheckbox) {
   const card = document.createElement("div");
   card.className = "clipper-card";
   const catName = getCategoryName(clip.url);
 
-  const cleanText = escapeHtml(clip.text).trim();
+  const cleanText = escapeHtml(normalizeClipText(clip.text));
   const lineCount = (cleanText.match(/\n/g) || []).length;
   const isLong = cleanText.length > 250 || lineCount > 3;
 

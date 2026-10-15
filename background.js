@@ -117,11 +117,22 @@ function handleSaveClip(info, tab) {
   const pageUrl = tab.url || "";
   const pageTitle = tab.title || "Untitled Page";
 
-  const cleanRawText = rawSelectedText
+  let cleanRawText = rawSelectedText
     .replace(/\r\n/g, "\n")
     .replace(/[ \t]+\n/g, "\n")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
+
+  // Guard: some selections serialise with a newline after every fragment, which
+  // renders as one character per line. If newlines make up an implausible share
+  // of the text, it is a serialisation artefact rather than real line structure.
+  const newlineCount = (cleanRawText.match(/\n/g) || []).length;
+  if (newlineCount > 0 && newlineCount > cleanRawText.length / 3) {
+    cleanRawText = cleanRawText
+      .replace(/\s*\n\s*/g, " ")
+      .replace(/[ \t]{2,}/g, " ")
+      .trim();
+  }
 
   const normalizeText = (str) => str.replace(/\s+/g, " ").trim();
   const normalizedSelected = normalizeText(cleanRawText);
