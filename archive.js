@@ -48,6 +48,14 @@
     return promisify(store(db, PAGES, "readonly").count());
   }
 
+  // Imported entries are link-only placeholders, not archived articles, and they
+  // cost almost nothing to store. They must not consume the free offline-page
+  // allowance — only real captures count toward it.
+  async function countArchivedPages() {
+    const pages = await listPages();
+    return pages.filter((page) => !page.imported).length;
+  }
+
   async function putPage(page, body) {
     const db = await openDB();
     return new Promise((resolve, reject) => {
@@ -155,6 +163,7 @@
     DB_NAME,
     openDB,
     countPages,
+    countArchivedPages,
     putPage,
     getPage,
     getPageByUrl,

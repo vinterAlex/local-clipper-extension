@@ -4,6 +4,7 @@
   "use strict";
 
   const FREE_PAGE_LIMIT = 10;
+  const FREE_IMPORT_LIMIT = 500;
   const REVIEW_SAVE_THRESHOLD = 10;
   const REVIEW_URL =
     "https://chromewebstore.google.com/detail/local-clipper-%E2%80%94-private-w/lbenljceefgoppjoemkgkbpgdebnkjje/reviews";
@@ -184,7 +185,7 @@
     els.upsell.style.display = "block";
     els.upsell.innerHTML = query.trim()
       ? "Full-text search is a <strong>Pro</strong> feature. Upgrade to search inside saved pages."
-      : `Free plan saves up to ${FREE_PAGE_LIMIT} pages. <strong>Pro</strong> unlocks unlimited pages, full-text search, archive export, and unlimited import.`;
+      : `Free plan saves up to ${FREE_PAGE_LIMIT} pages offline. <strong>Pro</strong> unlocks unlimited pages, full-text search, and archive export.`;
   }
 
   async function openReader(id) {
@@ -347,7 +348,10 @@
       return !have.has(String(item.url).replace(/\/+$/, "").toLowerCase());
     });
 
-    const allowance = state.isPro ? Infinity : Math.max(0, FREE_PAGE_LIMIT - existing.length);
+    // Imported links are not archived articles, so they use the (much larger)
+    // import allowance instead of the offline-page allowance.
+    const alreadyImported = existing.filter(function (page) { return page.imported; }).length;
+    const allowance = state.isPro ? Infinity : Math.max(0, FREE_IMPORT_LIMIT - alreadyImported);
     const take = allowance === Infinity ? fresh : fresh.slice(0, allowance);
 
     let imported = 0;
@@ -380,7 +384,7 @@
 
     const remaining = fresh.length - imported;
     if (remaining > 0) {
-      parts.push("<br>Your free plan holds " + FREE_PAGE_LIMIT + " pages — <strong>Pro</strong> " +
+      parts.push("<br>The free plan imports up to " + FREE_IMPORT_LIMIT + " links — <strong>Pro</strong> " +
         "would bring in the remaining " + remaining + ".");
     }
 

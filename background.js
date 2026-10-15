@@ -185,7 +185,7 @@ async function handleSavePage(tab) {
 
   const data = await chrome.storage.local.get({ isPro: false });
   if (!existing && !data.isPro) {
-    const count = await ClipperArchive.countPages();
+    const count = await ClipperArchive.countArchivedPages();
     if (count >= PAGES_FREE_LIMIT) {
       askContent(tab.id, { action: "page_limit_reached", limit: PAGES_FREE_LIMIT });
       return;
@@ -244,7 +244,7 @@ async function routeMessage(message, sender) {
     }
     case "page_count": {
       const [count, data] = await Promise.all([
-        ClipperArchive.countPages(),
+        ClipperArchive.countArchivedPages(),
         chrome.storage.local.get({ isPro: false })
       ]);
       return { ok: true, count, isPro: data.isPro, limit: PAGES_FREE_LIMIT };
