@@ -979,3 +979,30 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 });
 
 renderDrawerClips();
+
+// ── Keep the UI alive on single-page apps ────────────────────────────────
+// React / Next.js and similar frameworks can replace document.body while
+// hydrating, which throws away nodes we appended to it. The symptom is the
+// "📌 Clips" button flashing into view and disappearing in the same second.
+// Re-attach the button and the drawer whenever they are detached.
+function mountClipperUi() {
+  const target = document.body || document.documentElement;
+  if (!target) return;
+  if (!dockBtn.isConnected) target.appendChild(dockBtn);
+  if (!drawer.isConnected) target.appendChild(drawer);
+}
+
+let clipperUiWatch = null;
+
+function watchClipperUi() {
+  if (clipperUiWatch) clipperUiWatch.disconnect();
+  clipperUiWatch = new MutationObserver(() => {
+    if (!dockBtn.isConnected || !drawer.isConnected) mountClipperUi();
+  });
+  // subtree: true so this also survives the page swapping out <body> itself.
+  // The callback is two O(1) checks, and MutationObserver batches, so it is cheap.
+  clipperUiWatch.observe(document.documentElement, { childList: true, subtree: true });
+}
+
+mountClipperUi();
+watchClipperUi();
