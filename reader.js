@@ -432,9 +432,17 @@
       // Best effort only.
     }
 
-    const data = await chrome.storage.local.get({ theme: "light", isPro: false });
-    state.isPro = !!data.isPro;
+    const data = await chrome.storage.local.get({ theme: "light" });
     applyTheme(data.theme);
+
+    // Ask the background instead of trusting storage: it re-derives Pro from the
+    // licence record, so a hand-set isPro does not unlock the library either.
+    state.isPro = await new Promise((resolve) => {
+      chrome.runtime.sendMessage({ action: "license_status" }, (res) => {
+        void chrome.runtime.lastError;
+        resolve(!!(res && res.isPro));
+      });
+    });
 
     els.search.addEventListener("input", onSearchInput);
     els.back.addEventListener("click", closeReader);

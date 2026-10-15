@@ -1,11 +1,36 @@
 // Service worker: context menus, clip saving, and page-archive orchestration.
 // Page bodies live in IndexedDB (archive.js); snippets/settings stay in
 // chrome.storage.local to preserve the existing shape ({ clips, isPro }).
-importScripts("archive.js");
+importScripts("archive.js", "license.js");
 
 const COMMUNITY_CLIP_LIMIT = 50;
 const PAGES_FREE_LIMIT = 10;
 const DEFAULT_PAGE_SETTINGS = { embedImages: true };
+
+// ── Licence gate ─────────────────────────────────────────────────────────
+// `isPro` is a cache, never the source of truth. It is re-derived from the
+// licence record every time this worker starts. MV3 tears the worker down after
+// ~30s idle and restarts it on the next event, so a hand-set
+// chrome.storage.local.set({ isPro: true }) gets overwritten almost immediately.
+async function syncProFromLicense() {
+  try {
+    const record = await ClipperLicense.readRecord();
+    const pro = ClipperLicense.isRecordUsable(record);
+    await new Promise((resolve) => chrome.storage.local.set({ isPro: pro }, resolve));
+
+    if (pro && ClipperLicense.isStale(record)) {
+      ClipperLicense.revalidate()
+        .then((result) => chrome.storage.local.set({ isPro: !!result.ok }))
+        .catch(() => {});
+    }
+    return pro;
+  } catch (e) {
+    return false;
+  }
+}
+
+// Runs on every service-worker start — this is what makes the bypass fail.
+syncProFromLicense();
 
 let currentSelection = "";
 const captureBuffers = new Map();
@@ -324,6 +349,26 @@ async function routeMessage(message, sender) {
     }
     case "set_page_settings": {
       await chrome.storage.local.set({ pageSettings: message.settings });
+      return { ok: true };
+    }
+    case "license_status": {
+      const pro = await syncProFromLicense();
+      const record = await ClipperLicense.readRecord();
+      return {
+        ok: true,
+        isPro: pro,
+        hasKey: !!(record && record.key),
+        status: record ? record.status : "none"
+      };
+    }
+    case "activate_license": {
+      const result = await ClipperLicense.activate(message.key);
+      await syncProFromLicense();
+      return result;
+    }
+    case "deactivate_license": {
+      await ClipperLicense.deactivate();
+      await syncProFromLicense();
       return { ok: true };
     }
     default:

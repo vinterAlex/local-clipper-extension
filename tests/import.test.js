@@ -171,4 +171,30 @@ test("CSV written by toCsv reads back identically", () => {
   assert.strictEqual(back[1].text, clips[1].text, "newlines survive");
 });
 
+// ── licence gate ─────────────────────────────────────────────────────────
+const ClipperLicense = require(path.join(__dirname, "..", "license.js"));
+
+test("a licence record is unusable without a key", () => {
+  assert.strictEqual(ClipperLicense.isRecordUsable(null), false);
+  assert.strictEqual(ClipperLicense.isRecordUsable({}), false);
+  assert.strictEqual(ClipperLicense.isRecordUsable({ key: "abc" }), false, "no status");
+  assert.strictEqual(ClipperLicense.isRecordUsable({ key: "abc", status: "invalid" }), false);
+});
+
+test("a licence record is usable when active with a key", () => {
+  assert.strictEqual(ClipperLicense.isRecordUsable({ key: "abc", status: "active" }), true);
+});
+
+test("records go stale after the revalidation window", () => {
+  const fresh = { key: "abc", status: "active", validatedAt: Date.now() };
+  const old = {
+    key: "abc",
+    status: "active",
+    validatedAt: Date.now() - ClipperLicense.REVALIDATE_AFTER_MS - 1000
+  };
+  assert.strictEqual(ClipperLicense.isStale(fresh), false);
+  assert.strictEqual(ClipperLicense.isStale(old), true);
+  assert.strictEqual(ClipperLicense.isStale({ key: "abc", status: "active" }), true, "no timestamp = stale");
+});
+
 console.log("\n" + passed + " passed");

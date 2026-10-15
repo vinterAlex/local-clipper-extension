@@ -789,34 +789,34 @@ btnPro.addEventListener("click", () => {
   proBox.style.display = proBox.style.display === "block" ? "none" : "block";
 });
 
-btnActivate.addEventListener("click", async () => {
+// Activation runs in the background service worker. It stores a licence record
+// and re-derives isPro from that record — the panel never writes isPro itself,
+// which is what stops chrome.storage.local.set({ isPro: true }) from working.
+btnActivate.addEventListener("click", () => {
   const key = licenseKeyInput.value.trim();
   if (!key) return alert("Please enter a key.");
 
-  try {
-    const res = await fetch("https://api.lemonsqueezy.com/v1/licenses/validate", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({ license_key: key })
-    });
-    const json = await res.json();
+  btnActivate.disabled = true;
+  btnActivate.innerText = "Activating...";
 
-    if (json.valid) {
-      chrome.storage.local.set({ isPro: true }, () => {
-        alert("License activated! You are now Pro.");
-        proBox.style.display = "none";
-        if (currentTab === "pages") {
-          renderPages(pageSearchInput.value);
-        } else {
-          renderDrawerClips();
-        }
-      });
+  chrome.runtime.sendMessage({ action: "activate_license", key }, (res) => {
+    void chrome.runtime.lastError;
+    btnActivate.disabled = false;
+    btnActivate.innerText = "Activate License";
+
+    if (res && res.ok) {
+      licenseKeyInput.value = "";
+      alert("Licence activated. Pro features are unlocked.");
+      proBox.style.display = "none";
+      if (currentTab === "pages") {
+        renderPages(pageSearchInput.value);
+      } else {
+        renderDrawerClips();
+      }
     } else {
-      alert("Invalid license key.");
+      alert((res && res.error) || "That licence key was not accepted.");
     }
-  } catch (err) {
-    alert("Error validating key.");
-  }
+  });
 });
 
 function hashString(str) {
