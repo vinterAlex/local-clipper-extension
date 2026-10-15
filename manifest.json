@@ -15,7 +15,7 @@
     {
       "matches": ["<all_urls>"],
       "css": ["content.css"],
-      "js": ["capture.js", "content.js"]
+      "js": ["capture.js", "import.js", "content.js"]
     }
   ]
 }

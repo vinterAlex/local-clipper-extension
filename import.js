@@ -81,7 +81,8 @@
   }
 
   // ── CSV ────────────────────────────────────────────────────────────────
-  function parseCsvRows(text) {
+  function parseCsvRows(text, delimiter) {
+    const sep = delimiter || ",";
     const rows = [];
     let row = [];
     let field = "";
@@ -98,7 +99,7 @@
         }
       } else if (ch === '"') {
         inQuotes = true;
-      } else if (ch === ",") {
+      } else if (ch === sep) {
         row.push(field); field = "";
       } else if (ch === "\n") {
         row.push(field); rows.push(row); row = []; field = "";
@@ -178,6 +179,81 @@
     return items;
   }
 
+  // ── CSV writing ────────────────────────────────────────────────────────
+  // RFC 4180: quote a field only when it needs it; escape quotes by doubling.
+  function csvField(value) {
+    const text = String(value == null ? "" : value);
+    return /[",\r\n]/.test(text) ? '"' + text.replace(/"/g, '""') + '"' : text;
+  }
+
+  function toCsv(rows) {
+    return rows.map(function (row) {
+      return row.map(csvField).join(",");
+    }).join("\r\n");
+  }
+
+  // ── clips ──────────────────────────────────────────────────────────────
+  // Accepts what this extension exports — JSON ([{id,text,url,title,timestamp}])
+  // or a delimited file with a Text column (Title / URL / Category optional).
+  function parseClips(text, filename) {
+    const kind = detect(text, filename);
+
+    if (kind === "json") {
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (e) {
+        return [];
+      }
+      const list = Array.isArray(data) ? data
+        : (data && Array.isArray(data.clips) ? data.clips : []);
+      const out = [];
+      list.forEach(function (entry) {
+        if (!entry || typeof entry !== "object") return;
+        const body = String(entry.text || entry.clip || entry.content || "").trim();
+        if (!body) return;
+        out.push({
+          text: body,
+          url: cleanText(entry.url || ""),
+          title: cleanText(entry.title || ""),
+          timestamp: normalizeDate(cleanText(entry.timestamp || entry.savedAt || ""))
+        });
+      });
+      return out;
+    }
+
+    // Delimited: choose tab or comma by whichever appears more in the header row.
+    const header = String(text).split(/\r?\n/)[0] || "";
+    const separator = header.split("\t").length > header.split(",").length ? "\t" : ",";
+    const rows = parseCsvRows(text, separator);
+    if (!rows.length) return [];
+
+    const cols = rows[0].map(function (h) { return cleanText(h).toLowerCase(); });
+    function find(names) {
+      return cols.findIndex(function (h) { return names.indexOf(h) !== -1; });
+    }
+    const textCol = find(["text", "clip", "content", "snippet"]);
+    if (textCol === -1) return [];
+
+    const titleCol = find(["title", "name"]);
+    const urlCol = find(["url", "link", "href"]);
+    const timeCol = find(["timestamp", "saved at", "date", "created"]);
+
+    const out = [];
+    for (let i = 1; i < rows.length; i++) {
+      const cells = rows[i];
+      const body = String(cells[textCol] || "").trim();
+      if (!body) continue;
+      out.push({
+        text: body,
+        url: urlCol > -1 ? cleanText(cells[urlCol]) : "",
+        title: titleCol > -1 ? cleanText(cells[titleCol]) : "",
+        timestamp: timeCol > -1 ? normalizeDate(cleanText(cells[timeCol])) : ""
+      });
+    }
+    return out;
+  }
+
   // ── detection + entry point ────────────────────────────────────────────
   function detect(text, filename) {
     const head = String(text || "").slice(0, 4000);
@@ -216,6 +292,9 @@
     parseNetscape: parseNetscape,
     parseCsv: parseCsv,
     parseJson: parseJson,
+    parseClips: parseClips,
+    toCsv: toCsv,
+    csvField: csvField,
     dedupe: dedupe,
     domainOf: domainOf,
     cleanText: cleanText,

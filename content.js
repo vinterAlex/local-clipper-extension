@@ -59,6 +59,7 @@ drawer.innerHTML = `
             <div id="clipperDropdownMenu" class="clipper-dropdown-content">
               <button id="clipperBtnExport">Export CSV<span class="clipper-pro-hint">PRO</span></button>
               <button id="clipperBtnExportJson">Export JSON<span class="clipper-pro-hint">PRO</span></button>
+              <button id="clipperBtnImportClips">Import clips (CSV / JSON)</button>
               <hr style="border:none; border-top:1px solid var(--clipper-border-color); margin:4px 0;">
               <button id="clipperBtnClear" style="color:#dc2626;">Clear All Clips</button>
             </div>
@@ -164,6 +165,7 @@ const filteredCountSpan = document.getElementById("clipperFilteredCount");
 const categoryBox = document.getElementById("clipperCategoryBox");
 const btnExport = document.getElementById("clipperBtnExport");
 const btnExportJson = document.getElementById("clipperBtnExportJson");
+const btnImportClips = document.getElementById("clipperBtnImportClips");
 const btnClear = document.getElementById("clipperBtnClear");
 const btnPro = document.getElementById("clipperBtnPro");
 const proBox = document.getElementById("clipperProBox");
@@ -333,6 +335,27 @@ function renderStorageTracker(bytes, quota) {
   storageProgressBar.style.width = `${percentage}%`;
   storageProgressBar.style.background = highUsage ? "#e11d48" : percentage > 80 ? "#f59e0b" : "#0284c7";
   storageWarning.style.display = highUsage ? "block" : "none";
+
+  // Hover detail. The bar is measured against the quota the browser reports, and
+  // with the "unlimited storage" permission that is nearly all free disk space —
+  // so it sits near zero almost forever and says nothing useful on its own.
+  // Absolute size is the number that matters, so spell it out.
+  const quotaNote = quota > 0
+    ? `Chrome reports ${(quota / (1024 * 1024 * 1024)).toFixed(1)} GB available to this extension.`
+    : "The browser did not report a quota.";
+
+  storageUsageText.title =
+    "Clips + saved pages, stored on this device only — nothing is uploaded.\n" +
+    `Using ${mb} MB right now.\n` +
+    quotaNote + "\n\n" +
+    "This extension has the \"unlimited storage\" permission, so the real limit is " +
+    "your free disk space, not a fixed cap.\n\n" +
+    "When to pay attention:\n" +
+    "  • under 100 MB — normal, nothing to do\n" +
+    "  • 100 MB – 1 GB — worth a look; saved pages are the heavy part\n" +
+    "  • over 1 GB — export, then clear what you no longer read\n\n" +
+    "Clips are tiny. Saved pages keep an offline snapshot, and pages with inlined " +
+    "images grow fastest. Turning off \"Embed images offline\" keeps new saves small.";
 }
 
 let storageTrackerBusy = false;
@@ -649,19 +672,19 @@ btnExport.addEventListener("click", () => {
 
       if (clipsToExport.length === 0) return alert("No matching clips to export!");
 
-      let tsv = "Title\tCategory\tURL\tText\n";
+      const rows = [["Title", "Category", "URL", "Text"]];
       clipsToExport.forEach(c => {
-        const cat = getCategoryName(c.url);
-        const cleanTitle = (c.title || "").replace(/[\r\n\t]/g, " ");
-        const cleanText = (c.text || "").replace(/\t/g, " ").replace(/[\r\n]+/g, " ");
-        tsv += `${cleanTitle}\t${cat}\t${c.url}\t${cleanText}\n`;
+        rows.push([c.title || "", getCategoryName(c.url), c.url || "", c.text || ""]);
       });
 
-      const blob = new Blob(["\uFEFF" + tsv], { type: "text/tab-separated-values;charset=utf-8;" });
+      // Real CSV (comma-separated, RFC 4180 quoting). Newlines inside a clip stay
+      // inside the quoted field, which Excel and Sheets both handle. The previous
+      // export was tab-separated and flattened the clip text.
+      const blob = new Blob(["\uFEFF" + ClipperImport.toCsv(rows)], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "my_clips_excel.tsv";
+      a.download = "my_clips.csv";
       a.click();
     });
   });
@@ -689,6 +712,77 @@ btnExportJson.addEventListener("click", () => {
       a.click();
     });
   });
+});
+
+// ── Clip import ──────────────────────────────────────────────────────────
+// Brings clips back in from our own CSV or JSON export, or any delimited file
+// with a Text column. Honours the same 50-clip free limit as normal saving.
+function importClipsFromText(text, filename) {
+  const incoming = ClipperImport.parseClips(text, filename);
+  if (!incoming.length) {
+    showToastNotification(
+      "No clips found in " + filename + ". Expected a CSV with a Text column, or the JSON export.",
+      true
+    );
+    return;
+  }
+
+  chrome.storage.local.get({ clips: [], isPro: false }, (data) => {
+    const existing = data.clips || [];
+    const freeLimit = 50; // matches COMMUNITY_CLIP_LIMIT in background.js
+
+    const clipKey = (clip) =>
+      String(clip.text || "").replace(/\s+/g, " ").trim().toLowerCase() + "|" + String(clip.url || "");
+    const have = new Set(existing.map(clipKey));
+    const fresh = incoming.filter((clip) => !have.has(clipKey(clip)));
+
+    const allowance = data.isPro ? Infinity : Math.max(0, freeLimit - existing.length);
+    const take = allowance === Infinity ? fresh : fresh.slice(0, allowance);
+
+    const now = Date.now();
+    const added = take.map((clip, index) => ({
+      id: now + index,
+      text: clip.text,
+      url: clip.url || "",
+      title: clip.title || clip.url || "Imported clip",
+      timestamp: clip.timestamp || new Date().toISOString()
+    }));
+
+    chrome.storage.local.set({ clips: added.concat(existing) }, () => {
+      const parts = ["Imported " + added.length + " of " + incoming.length + " clips."];
+      const dupes = incoming.length - fresh.length;
+      if (dupes > 0) parts.push(dupes + " were already saved.");
+      const remaining = fresh.length - added.length;
+      if (remaining > 0) {
+        parts.push("The free plan holds " + freeLimit + " clips — Pro would bring in the remaining " + remaining + ".");
+      }
+      showToastNotification("📥 " + parts.join(" "), remaining > 0);
+      renderDrawerClips(searchInput.value);
+      updateStorageTracker();
+    });
+  });
+}
+
+btnImportClips.addEventListener("click", () => {
+  dropdownMenu.classList.remove("show");
+
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = ".csv,.tsv,.json,.txt";
+  input.addEventListener("change", () => {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        importClipsFromText(String(reader.result || ""), file.name);
+      } catch (err) {
+        showToastNotification("Could not read that file.", true);
+      }
+    };
+    reader.readAsText(file);
+  });
+  input.click();
 });
 
 btnPro.addEventListener("click", () => {

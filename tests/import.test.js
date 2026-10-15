@@ -123,4 +123,52 @@ test("domainOf strips www", () => {
   assert.strictEqual(ClipperImport.domainOf("https://www.example.com/a"), "example.com");
 });
 
+// ── clips ────────────────────────────────────────────────────────────────
+test("parseClips reads our own JSON export", () => {
+  const json = JSON.stringify([
+    { id: 1, text: "hello world", url: "https://a.example", title: "A", timestamp: "2026-01-01T00:00:00.000Z" },
+    { id: 2, text: "   ", url: "https://b.example" }
+  ]);
+  const clips = ClipperImport.parseClips(json, "my_clips.json");
+  assert.strictEqual(clips.length, 1, "blank clip dropped");
+  assert.strictEqual(clips[0].text, "hello world");
+  assert.strictEqual(clips[0].url, "https://a.example");
+});
+
+test("parseClips reads CSV and keeps newlines inside quoted fields", () => {
+  const csv = 'Title,Category,URL,Text\r\n"My, title",cat,https://a.example,"line one\nline two"';
+  const clips = ClipperImport.parseClips(csv, "my_clips.csv");
+  assert.strictEqual(clips.length, 1);
+  assert.strictEqual(clips[0].title, "My, title");
+  assert.strictEqual(clips[0].text, "line one\nline two");
+});
+
+test("parseClips still reads the old tab-separated export", () => {
+  const tsv = "Title\tCategory\tURL\tText\nT\tcat\thttps://b.example\tplain text";
+  const clips = ClipperImport.parseClips(tsv, "old.tsv");
+  assert.strictEqual(clips.length, 1);
+  assert.strictEqual(clips[0].text, "plain text");
+});
+
+test("parseClips returns nothing without a Text column", () => {
+  assert.deepStrictEqual(ClipperImport.parseClips("a,b\n1,2", "x.csv"), []);
+});
+
+// ── export -> import round trip ──────────────────────────────────────────
+test("CSV written by toCsv reads back identically", () => {
+  const clips = [
+    { text: 'He said "hello", then left.', url: "https://a.example", title: "Quotes, commas" },
+    { text: "line one\nline two", url: "https://b.example", title: "Multi\nline" }
+  ];
+  const rows = [["Title", "Category", "URL", "Text"]];
+  clips.forEach((c) => rows.push([c.title, "example.com", c.url, c.text]));
+  const csv = ClipperImport.toCsv(rows);
+
+  const back = ClipperImport.parseClips(csv, "my_clips.csv");
+  assert.strictEqual(back.length, 2);
+  assert.strictEqual(back[0].text, clips[0].text, "quotes and commas survive");
+  assert.strictEqual(back[0].title, clips[0].title);
+  assert.strictEqual(back[1].text, clips[1].text, "newlines survive");
+});
+
 console.log("\n" + passed + " passed");
