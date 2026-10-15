@@ -64,6 +64,13 @@
   }
 
   // First activation: the key has never been seen on this machine.
+  //
+  // This uses Lemon Squeezy's documented first-use endpoint. Note that /activate
+  // registers an *instance* on every call, so the product's "activation limit"
+  // setting caps how many times a customer can ever (re)activate — across
+  // reinstalls and devices. Keep that limit generous in the Lemon Squeezy
+  // dashboard (or unlimited); 5 will eventually lock someone out of something
+  // they paid for.
   function activate(key) {
     return post(ACTIVATE_URL, { license_key: key, instance_name: "Local Clipper" })
       .then((json) => {
