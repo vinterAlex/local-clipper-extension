@@ -974,6 +974,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     const ok = window.confirm("A saved copy of this page already exists. Replace it with the current version?");
     sendResponse({ ok });
     return true;
+  } else if (msg.action === "page_duplicate_kept") {
+    showToastNotification("📄 This page is already saved — kept the existing copy.");
   }
   return undefined;
 });

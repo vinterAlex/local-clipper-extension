@@ -180,7 +180,12 @@ async function handleSavePage(tab) {
   const existing = await ClipperArchive.getPageByUrl(tab.url);
   if (existing) {
     const response = await askContent(tab.id, { action: "page_duplicate_prompt", title: existing.title });
-    if (!response || !response.ok) return;
+    if (!response || !response.ok) {
+      // The user chose to keep the existing copy. Say so — otherwise the button
+      // looks like it did nothing at all.
+      askContent(tab.id, { action: "page_duplicate_kept", title: existing.title });
+      return;
+    }
   }
 
   const data = await chrome.storage.local.get({ isPro: false });
